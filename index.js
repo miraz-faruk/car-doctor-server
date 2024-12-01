@@ -1,14 +1,19 @@
 const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
+const cookieParser = require('cookie-parser');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config();
 const app = express();
 const port = process.env.PORT || 5001;
 
 // middleware
-app.use(cors());
+app.use(cors({
+    origin: ['http://localhost:5173'],
+    credentials: true
+}));
 app.use(express.json());
+app.use(cookieParser());
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.7plli.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -32,8 +37,13 @@ async function run() {
         app.post('/jwt', (req, res) => {
             const user = req.body;
             console.log(user);
-            const token = jwt.sign(user, 'secret', { expiresIn: '1h' })
-            res.send(token);
+            const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' })
+            res
+                .cookie('token', token, {
+                    httpOnly: true,
+                    secure: false,
+                })
+                .send({ success: true });
         })
 
         // Service related api
@@ -54,6 +64,7 @@ async function run() {
         // Bookings
         app.get('/bookings', async (req, res) => {
             console.log(req.query.email);
+            console.log('tok tok token', req.cookies.token);
             let query = {};
             if (req.query?.email) {
                 query = { email: req.query.email }
